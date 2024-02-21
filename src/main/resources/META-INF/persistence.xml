@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<persistence xmlns="http://xmlns.jcp.org/xml/ns/persistence"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2.1"
+	xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/persistence http://xmlns.jcp.org/xml/ns/persistence/persistence_2_1.xsd">
+	<persistence-unit name="my-persistence-unit">
+        <description>Persistence-Hub.com</description>
+		<provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+		<exclude-unlisted-classes>false</exclude-unlisted-classes>
+
+		<properties>
+			<property name="hibernate.generate_statistics" value="true" />
+
+			<!-- activate multi tenancy -->
+			<property name="hibernate.tenant_identifier_resolver" value="com.thorben.janssen.multitenancy.TenantIdResolver" />
+
+			<!-- default timezone handling -->
+			<!-- <property name="hibernate.timezone.default_storage" value="NORMALIZE"/> -->
+
+			<property name="jakarta.persistence.jdbc.driver" value="org.postgresql.Driver" />
+			<property name="jakarta.persistence.jdbc.url" value="jdbc:postgresql://localhost:5432/postgres" />
+			<property name="jakarta.persistence.jdbc.user" value="postgres" />
+			<property name="jakarta.persistence.jdbc.password" value="postgres" />
+
+			<property name="jakarta.persistence.schema-generation.database.action" value="drop-and-create" />
+			<!-- <property name="jakarta.persistence.schema-generation.create-script-source" value="create-db.sql" /> -->
+		</properties>
+	</persistence-unit>
+</persistence>

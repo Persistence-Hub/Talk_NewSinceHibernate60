@@ -13,6 +13,8 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.query.criteria.CriteriaDefinition;
+import org.hibernate.query.criteria.HibernateCriteriaBuilder;
+import org.hibernate.query.criteria.JpaCriteriaQuery;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -23,13 +25,12 @@ import com.thorben.janssen.model.ChessGame_;
 import com.thorben.janssen.model.ChessMove;
 import com.thorben.janssen.model.Move;
 import com.thorben.janssen.model.MoveColor;
-import com.thorben.janssen.model.MoveId;
-import com.thorben.janssen.model.ChessGame;
 import com.thorben.janssen.multitenancy.TenantIdResolver;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
+import jakarta.persistence.criteria.Root;
 
 public class TestHibernate {
 
@@ -94,13 +95,9 @@ public class TestHibernate {
 		EntityManager em = emf.createEntityManager();
 		em.getTransaction().begin();
 
-		// HibernateCriteriaBuilder builder = em.unwrap(Session.class).getCriteriaBuilder();
-		// JpaCriteriaQuery<ChessGame> criteriaQuery = builder.createQuery("SELECT g FROM ChessGame g", ChessGame.class);
-		// Root<?> gameRoot = criteriaQuery.getRootList().get(0);
-		
-		var builder = em.unwrap(Session.class).getCriteriaBuilder();
-		var criteriaQuery = builder.createQuery("SELECT g FROM ChessGame g", ChessGame.class);
-		var gameRoot = criteriaQuery.getRootList().get(0);
+		HibernateCriteriaBuilder builder = em.unwrap(Session.class).getCriteriaBuilder();
+		JpaCriteriaQuery<ChessGame> criteriaQuery = builder.createQuery("SELECT g FROM ChessGame g", ChessGame.class);
+		Root<?> gameRoot = criteriaQuery.getRootList().get(0);
 		
 		criteriaQuery.where(builder.like(gameRoot.get(ChessGame_.PLAYER_WHITE), "Thorben %"));
 		ChessGame game = em.createQuery(criteriaQuery).getSingleResult();
@@ -166,7 +163,8 @@ public class TestHibernate {
 		em.getTransaction().begin();
 
 		ChessMove move = new ChessMove();
-		move.setId(new MoveId(UUID.randomUUID()));
+		// move.setId(new MoveId(UUID.randomUUID()));
+		move.setId(UUID.randomUUID());
 		move.setMoveNumber(1);
 		move.setMove(new Move(MoveColor.WHITE, "e4"));
 		em.persist(move);

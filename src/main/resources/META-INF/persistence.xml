@@ -15,6 +15,7 @@
 
 			<!-- default timezone handling -->
 			<!-- <property name="hibernate.timezone.default_storage" value="NORMALIZE"/> -->
+			<!-- <property name="hibernate.type.prefer_java_type_jdbc_types" value="true" /> -->
 
 			<property name="jakarta.persistence.jdbc.driver" value="org.postgresql.Driver" />
 			<property name="jakarta.persistence.jdbc.url" value="jdbc:postgresql://localhost:5432/postgres" />

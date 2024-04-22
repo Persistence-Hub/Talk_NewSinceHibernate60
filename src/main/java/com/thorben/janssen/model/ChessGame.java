@@ -28,6 +28,14 @@ public class ChessGame {
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;
 
+    /**
+     * NATIVE: column type timestamp_with_timezone
+     * NORMALIZE: normalize to server timezone (= Hibernate 5)
+     * NORMALIZE_UTC: normalize to UTC
+     * COLUMN: 1 column timestamp, 1 column offset
+     * AUTO: depends on dialect, NATIVE or COLUMN
+     * DEFAULT: depends on dialect, NATIVE or NORMALIZE_UTC (>= Hibernate 6.2)
+     */
     @TimeZoneStorage(TimeZoneStorageType.DEFAULT)
     private ZonedDateTime date;
 
@@ -40,8 +48,8 @@ public class ChessGame {
     @OneToMany(mappedBy = "game")
     private Set<ChessMove> moves = new HashSet<>();
 
-    @TenantId
-    private String tenantId;
+    // @TenantId
+    // private String tenantId;
 
     @Version
     private int version;

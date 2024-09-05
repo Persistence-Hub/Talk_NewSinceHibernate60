@@ -13,6 +13,8 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.query.criteria.CriteriaDefinition;
+import org.hibernate.query.criteria.HibernateCriteriaBuilder;
+import org.hibernate.query.criteria.JpaCriteriaQuery;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -24,12 +26,12 @@ import com.thorben.janssen.model.ChessMove;
 import com.thorben.janssen.model.Move;
 import com.thorben.janssen.model.MoveColor;
 import com.thorben.janssen.model.MoveId;
-import com.thorben.janssen.model.ChessGame;
 import com.thorben.janssen.multitenancy.TenantIdResolver;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
+import jakarta.persistence.criteria.Root;
 
 public class TestHibernate {
 
@@ -45,7 +47,7 @@ public class TestHibernate {
 		TimeZone.setDefault(TimeZone.getTimeZone("CET"));
 
 		// manually set tenant id -- !!! DON'T DO THAT AT HOME !!!
-		((TenantIdResolver) ((SessionFactoryImplementor) emf.unwrap(SessionFactory.class)).getCurrentTenantIdentifierResolver()).setTenantIdentifier("tenant1");
+		// ((TenantIdResolver) ((SessionFactoryImplementor) emf.unwrap(SessionFactory.class)).getCurrentTenantIdentifierResolver()).setTenantIdentifier("tenant1");
 
 		gameId = prepareTestData();
 	}
@@ -94,13 +96,9 @@ public class TestHibernate {
 		EntityManager em = emf.createEntityManager();
 		em.getTransaction().begin();
 
-		// HibernateCriteriaBuilder builder = em.unwrap(Session.class).getCriteriaBuilder();
-		// JpaCriteriaQuery<ChessGame> criteriaQuery = builder.createQuery("SELECT g FROM ChessGame g", ChessGame.class);
-		// Root<?> gameRoot = criteriaQuery.getRootList().get(0);
-		
-		var builder = em.unwrap(Session.class).getCriteriaBuilder();
-		var criteriaQuery = builder.createQuery("SELECT g FROM ChessGame g", ChessGame.class);
-		var gameRoot = criteriaQuery.getRootList().get(0);
+		HibernateCriteriaBuilder builder = em.unwrap(Session.class).getCriteriaBuilder();
+		JpaCriteriaQuery<ChessGame> criteriaQuery = builder.createQuery("SELECT g FROM ChessGame g", ChessGame.class);
+		Root<?> gameRoot = criteriaQuery.getRootList().get(0);
 		
 		criteriaQuery.where(builder.like(gameRoot.get(ChessGame_.PLAYER_WHITE), "Thorben %"));
 		ChessGame game = em.createQuery(criteriaQuery).getSingleResult();
@@ -166,7 +164,8 @@ public class TestHibernate {
 		em.getTransaction().begin();
 
 		ChessMove move = new ChessMove();
-		move.setId(new MoveId(UUID.randomUUID()));
+		// move.setId(new MoveId(UUID.randomUUID()));
+		move.setId(UUID.randomUUID());
 		move.setMoveNumber(1);
 		move.setMove(new Move(MoveColor.WHITE, "e4"));
 		em.persist(move);
@@ -175,39 +174,6 @@ public class TestHibernate {
 		  .setParameter("move", "e4")
 		  .getResultList();
 
-		em.getTransaction().commit();
-		em.close();
-	}
-
-
-	/**
-	 * Improved multi tenancy
-	 */
-	@Test
-	public void multiTenancy() {
-		log.info("... multiTenancy ...");
-
-		// Persist game
-		EntityManager em = emf.createEntityManager();
-		em.getTransaction().begin();
-
-		ChessGame game = new ChessGame();
-		game.setDate(ZonedDateTime.now());
-		game.setPlayerWhite("Thorben Janssen");
-		game.setPlayerBlack("Someone on the internet");
-		em.persist(game);
-		
-		em.getTransaction().commit();
-		em.close();
-
-		// Find game
-		em = emf.createEntityManager();
-		em.getTransaction().begin();
-
-		List<ChessGame> games = em.createQuery("SELECT g FROM ChessGame g WHERE g.playerWhite = :player", ChessGame.class)
-								  .setParameter("player", "Thorben Janssen")
-								  .getResultList();
-		
 		em.getTransaction().commit();
 		em.close();
 	}
@@ -312,6 +278,45 @@ public class TestHibernate {
 
 
 
+
+
+
+
+
+
+
+	/**
+	 * Bonus:
+	 * Improved multi tenancy
+	 */
+	@Test
+	public void multiTenancy() {
+		log.info("... multiTenancy ...");
+
+		// Persist game
+		EntityManager em = emf.createEntityManager();
+		em.getTransaction().begin();
+
+		ChessGame game = new ChessGame();
+		game.setDate(ZonedDateTime.now());
+		game.setPlayerWhite("Thorben Janssen");
+		game.setPlayerBlack("Someone on the internet");
+		em.persist(game);
+		
+		em.getTransaction().commit();
+		em.close();
+
+		// Find game
+		em = emf.createEntityManager();
+		em.getTransaction().begin();
+
+		List<ChessGame> games = em.createQuery("SELECT g FROM ChessGame g WHERE g.playerWhite = :player", ChessGame.class)
+								  .setParameter("player", "Thorben Janssen")
+								  .getResultList();
+		
+		em.getTransaction().commit();
+		em.close();
+	}
 
 	private Long prepareTestData() {
 		EntityManager em = emf.createEntityManager();

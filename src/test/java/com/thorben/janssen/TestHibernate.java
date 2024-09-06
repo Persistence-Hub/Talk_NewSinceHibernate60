@@ -1,7 +1,10 @@
 package com.thorben.janssen;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
+import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.TimeZone;
@@ -11,6 +14,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.hibernate.StatelessSession;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.query.criteria.CriteriaDefinition;
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
@@ -27,6 +31,8 @@ import com.thorben.janssen.model.Move;
 import com.thorben.janssen.model.MoveColor;
 import com.thorben.janssen.model.MoveId;
 import com.thorben.janssen.multitenancy.TenantIdResolver;
+import com.thorben.janssen.repository.ChessGameRepository;
+import com.thorben.janssen.repository.ChessGameRepository_;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
@@ -38,54 +44,39 @@ public class TestHibernate {
 	Logger log = LogManager.getLogger(this.getClass().getName());
 
 	private EntityManagerFactory emf;
+	private ChessGameRepository chessGameRepo;
 
 	private Long gameId;
 
-	@Before
-	public void init() {
-		emf = Persistence.createEntityManagerFactory("my-persistence-unit");
-		TimeZone.setDefault(TimeZone.getTimeZone("CET"));
+	private StatelessSession statelessSession;
 
-		// manually set tenant id -- !!! DON'T DO THAT AT HOME !!!
-		// ((TenantIdResolver) ((SessionFactoryImplementor) emf.unwrap(SessionFactory.class)).getCurrentTenantIdentifierResolver()).setTenantIdentifier("tenant1");
-
-		gameId = prepareTestData();
-	}
-
-	@After
-	public void close() {
-		emf.close();
-	}
 
 	/**
-	 * Improved timezone handling
+	 * Records
 	 */
 	@Test
-	public void timezoneStorageType() {
+	public void embeddable() {
+		log.info("... embeddable ...");
+
+		// Find game
 		EntityManager em = emf.createEntityManager();
 		em.getTransaction().begin();
 
-		ChessGame game = new ChessGame();
-		game.setDate(ZonedDateTime.now());
-		game.setPlayerWhite("Thorben Janssen");
-		game.setPlayerBlack("Another player");
-		game.setRound(1);
-		em.persist(game);
+		ChessMove move = new ChessMove();
+		// move.setId(new MoveId(UUID.randomUUID()));
+		move.setId(UUID.randomUUID());
+		move.setMoveNumber(1);
+		move.setMove(new Move(MoveColor.WHITE, "e4"));
+		em.persist(move);
 		
-		em.getTransaction().commit();
-		em.close();
+		em.createQuery("SELECT m FROM ChessMove m WHERE m.move.move = :move")
+		  .setParameter("move", "e4")
+		  .getResultList();
 
-		em = emf.createEntityManager();
-		em.getTransaction().begin();
-
-		game = em.find(ChessGame.class, game.getId());
-		log.info(game.getDate());
-		
 		em.getTransaction().commit();
 		em.close();
 	}
-
-
+	
 	/**
 	 * Improved Criteria API
 	 */
@@ -146,33 +137,6 @@ public class TestHibernate {
 									.getSingleResult();
 
 		assertThat(game).isNotNull();
-
-		em.getTransaction().commit();
-		em.close();
-	}
-
-
-	/**
-	 * Records
-	 */
-	@Test
-	public void embeddable() {
-		log.info("... embeddable ...");
-
-		// Find game
-		EntityManager em = emf.createEntityManager();
-		em.getTransaction().begin();
-
-		ChessMove move = new ChessMove();
-		// move.setId(new MoveId(UUID.randomUUID()));
-		move.setId(UUID.randomUUID());
-		move.setMoveNumber(1);
-		move.setMove(new Move(MoveColor.WHITE, "e4"));
-		em.persist(move);
-		
-		em.createQuery("SELECT m FROM ChessMove m WHERE m.move.move = :move")
-		  .setParameter("move", "e4")
-		  .getResultList();
 
 		em.getTransaction().commit();
 		em.close();
@@ -247,8 +211,8 @@ public class TestHibernate {
 	}
 
 	@Test
-	public void daoCustomerQuery() {
-		log.info("... daoCustomerQuery ...");
+	public void daoCustomQuery() {
+		log.info("... daoCustomQuery ...");
 
 		// Find game
 		EntityManager em = emf.createEntityManager();
@@ -276,8 +240,20 @@ public class TestHibernate {
 		em.close();
 	}
 
+	/**
+	 * Jakarta Data Repositories
+	 */
+	@Test
+	public void repositoryCustomQuery() {
+		log.info("... repositoryCustomerQuery ...");
 
+		// Find game
+		List<ChessGame> games = chessGameRepo.findGamesByPlayer("Thorben Janssen");
+		games.forEach(g -> log.info(g.getPlayerWhite() + " - " + g.getPlayerBlack() + " played on " + g.getDate()));
 
+		games.forEach(g -> g.setRound(42));
+		chessGameRepo.updateAll(games);
+	}
 
 
 
@@ -317,6 +293,34 @@ public class TestHibernate {
 		em.getTransaction().commit();
 		em.close();
 	}
+	
+	/**
+	 * Improved timezone handling
+	 */
+	@Test
+	public void timezoneStorageType() {
+		EntityManager em = emf.createEntityManager();
+		em.getTransaction().begin();
+
+		ChessGame game = new ChessGame();
+		game.setDate(ZonedDateTime.now());
+		game.setPlayerWhite("Thorben Janssen");
+		game.setPlayerBlack("Another player");
+		game.setRound(1);
+		em.persist(game);
+		
+		em.getTransaction().commit();
+		em.close();
+
+		em = emf.createEntityManager();
+		em.getTransaction().begin();
+
+		game = em.find(ChessGame.class, game.getId());
+		log.info(game.getDate());
+		
+		em.getTransaction().commit();
+		em.close();
+	}
 
 	private Long prepareTestData() {
 		EntityManager em = emf.createEntityManager();
@@ -333,5 +337,27 @@ public class TestHibernate {
 		em.close();
 
 		return game.getId();
+	}
+
+	
+	@Before
+	public void init() {
+		emf = Persistence.createEntityManagerFactory("my-persistence-unit");
+		TimeZone.setDefault(TimeZone.getTimeZone("CET"));
+
+		// manually set tenant id -- !!! DON'T DO THAT AT HOME !!!
+		// ((TenantIdResolver) ((SessionFactoryImplementor) emf.unwrap(SessionFactory.class)).getCurrentTenantIdentifierResolver()).setTenantIdentifier("tenant1");
+
+		statelessSession = emf.unwrap(SessionFactory.class).openStatelessSession();
+		statelessSession.beginTransaction();
+		chessGameRepo = new ChessGameRepository_(statelessSession);
+
+		gameId = prepareTestData();
+	}
+
+	@After
+	public void close() {
+		statelessSession.getTransaction().commit();
+		emf.close();
 	}
 }

@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/devcontainers/java:1-17-bullseye
+FROM mcr.microsoft.com/devcontainers/java:21
 
 ARG INSTALL_MAVEN="true"
 ARG MAVEN_VERSION=""
